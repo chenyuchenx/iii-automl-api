@@ -16,11 +16,11 @@ def create_app():
     tags_metadata = [
         {
             "name": "Root",
-            "description": " Operations with users. The **login** and **tokenvalidation** logic is also here.",
+            "description": "",
         },
         {
             "name": "Services",
-            "description": " Get inAppInfos && Get service secret && Search quota.",
+            "description": "Operations with users. The **login** and **user/me** logic is also here.",
         },
         {
             "name": "Data Management",
@@ -31,7 +31,7 @@ def create_app():
             "description": ""
         },
         {
-            "name": "Model Management",
+            "name": "Model Repo Management",
             "description": ""
         },
         {
@@ -41,8 +41,8 @@ def create_app():
     ]
 
     app = FastAPI(
-        title="Industrial AI (IAI) Management API - Inference Server",
-        description=f"Industrial AI (IAI) Inference Platform User Module Documentation.",
+        title="Neural Auto III (NAI) Platform User Module Documentation.",
+        description=f"Neural Auto III (NAI) - Efficient AutoML For Everyone.",
         version=f"{p.IAPP_VERSION}",
         openapi_tags=tags_metadata
     )

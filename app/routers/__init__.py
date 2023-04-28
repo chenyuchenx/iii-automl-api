@@ -1,9 +1,10 @@
 from fastapi import Query, HTTPException, Response, Request
 from config import configs as p
 from app.src import sched
-from .rtm import router as rtm_router, services as services_router
-from .route import router as infer_router
+from .repo import router as repo_router
+from .task import router as infer_router
 from .dataset import router as data_router
+from .auth import app as auth_routh
 import os, sys
 
 def router_init(app):
@@ -18,7 +19,7 @@ def router_init(app):
         return f"The {p.IAPP_NAME_LOWER}-api is already working."
     
     @app.get("/images/icon.svg", tags=['Root'])
-    def read_image(appName: str = Query(None),):
+    def read_image(*, request: Request):
         try:
             if hasattr(sys, '_MEIPASS'):
                 base_path = sys._MEIPASS
@@ -31,10 +32,10 @@ def router_init(app):
         except OSError as e:
             raise HTTPException(status_code=404, detail=f"{e}")
     
-    app.include_router(rtm_router, prefix='', tags=['Root'])
-    app.include_router(services_router, prefix='', tags=['Services'])
+    app.include_router(auth_routh, prefix='', tags=['Services'])
     app.include_router(data_router, prefix='/data', tags=['Data Management'])
-    app.include_router(infer_router, prefix='/v2', tags=['Task Management'])
+    app.include_router(infer_router, prefix='/task', tags=['Task Management'])
+    app.include_router(repo_router, prefix='/repo', tags=['Model Repo Management'])
 
     #app.include_router(task_router, prefix='/api/task', tags=['task'] )
     #app.include_router(forward_router, prefix='/api/forwardinginfo', tags=['dataforward'])

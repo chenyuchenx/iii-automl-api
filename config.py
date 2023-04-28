@@ -8,20 +8,19 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     """System configurations."""
 
-    SKIP_TLS: Optional[bool]                = Field(False, env="SKIP_TLS")
-    IFPS_TIME_OUT: Optional[int]            = Field(10, env="IFPS_TIME_OUT")
-    IFP_SSL_ENABLE: Optional[bool]          = Field(False, env="IFP_SSL_ENABLE")
-    IFP_SSL_CERTIFICATE_FILE: Optional[str] = Field(None, env="IFP_SSL_CERTIFICATE_FILE")
-    IFP_SSL_PRIVATE_KEY_FILE: Optional[str] = Field(None, env="IFP_SSL_PRIVATE_KEY_FILE")
+    SKIP_TLS: Optional[bool]               = Field(False, env="SKIP_TLS")
+    TIME_OUT_LIMIT: Optional[int]          = Field(10, env="TIME_OUT_LIMIT")
+    IS_SSL_ENABLE: Optional[bool]          = Field(False, env="IS_SSL_ENABLE")
+    IS_SSL_CERTIFICATE_FILE: Optional[str] = Field(None, env="IS_SSL_CERTIFICATE_FILE")
+    IS_SSL_PRIVATE_KEY_FILE: Optional[str] = Field(None, env="IS_SSL_PRIVATE_KEY_FILE")
 
-    IAPP_NAME: Optional[str]         = Field("ifps-inference-api", env="IAPP_NAME")
-    IAPP_VERSION: Optional[str]      = Field("1.7.1.1", env="IAPP_VERSION")
+    IAPP_NAME: Optional[str]         = Field("iii-automl-api", env="IAPP_NAME")
+    IAPP_VERSION: Optional[str]      = Field("0.0.8", env="IAPP_VERSION")
     IAPP_NAME_CAPITAL: Optional[str] = Field(None, env="IAPP_NAME_CAPITAL")
     IAPP_NAME_LOWER: Optional[str]   = Field(None, env="IAPP_NAME_LOWER")
     IAPP_UI_URL: Optional[str]       = Field(None, env="IAPP_UI_URL")
     IAPP_API_URL: Optional[str]      = Field(None, env="IAPP_API_URL")
 
-    L3_MODE: Optional[bool]           = Field(True, env="L3_MODE")
     IS_UPPER: Optional[bool]          = Field(False, env="IS_UPPER")
     IS_LICENSE: Optional[bool]        = Field(True, env="IS_LICENSE")   #False 走測試
     SHOW_LICENSE: Optional[bool]      = Field(True, env="SHOW_LICENSE")
@@ -63,12 +62,6 @@ class Settings(BaseSettings):
     MINIO_PASSWORD: Optional[str] = Field(None, env="MINIO_PASSWORD")
     BUCKET_NAME: Optional[str]    = Field("Model Storage", env="BUCKET_NAME")
 
-    IFP_DESK_PREFIX: Optional[str]          = Field("ifp-api-hub", env="IFP_DESK_PREFIX")
-    IFP_DESK_URL: Optional[str]             = Field(None, env="IFP_DESK_UI_URL")
-    IFP_DESK_API_URL: Optional[str]         = Field(None, env="IFP_DESK_API_URL")
-    IFP_LICENSES_API_URL: Optional[str]     = Field(None, env="IFP_LICENSES_API_URL")
-    IFPS_ETCD_BROKER_API_URL: Optional[str] = Field(None, env="IFPS_ETCD_BROKER_API_URL")
-    IFPS_UDM_UI_URL: Optional[str]          = Field(None, env="IFPS_UDM_UI_URL")
     IFPS_DATAFABRIC_API_URL: Optional[str]  = Field(None, env="IFPS_DATAFABRIC_API_URL")
     
     class Config:
@@ -122,47 +115,20 @@ class Config(Settings):
             INFLUX_PASSWORD = open(Settings().INFLUX_PASSWORD_FILE).read().rstrip('\n')
     
     """ Mapping Url """
-    if Settings().L3_MODE and Settings().IFP_DESK_API_URL is None and Settings().EXTERNAL is not None:
-        IFP_DESK_URL             = "https://pivot-api-hub-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
-        IFP_DESK_API_URL         = "https://pivot-api-hub-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL+"/graphql"
-        IFP_EVENTNOTICE_API_URL  = "https://pivot-event-notice-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
-        IFP_MAINTENANCE_API_URL  = "https://maintenance-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL+"/api/v1/graphql"
-    elif Settings().IFP_DESK_API_URL is None and Settings().EXTERNAL is not None:
-        IFP_DESK_URL             = "https://"+Settings().IFP_DESK_PREFIX+"-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
-        IFP_DESK_API_URL         = "https://"+Settings().IFP_DESK_PREFIX+"-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL+"/graphql"
-        IFP_EVENTNOTICE_API_URL  = "https://ifp-event-notice-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
-        IFP_MAINTENANCE_API_URL  = "https://maintenance-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL+"/api/v1/graphql"
     if Settings().IAPP_API_URL is None and Settings().EXTERNAL is not None:
         IAPP_UI_URL              = "https://ifps-inference-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
         IAPP_API_URL             = "https://ifps-inference-api-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
-        IFPS_UDM_UI_URL          = "https://ifps-udm-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
     else:
-        IFPS_UDM_UI_URL          = "https://ifps-udm:5000"
         IAPP_UI_URL              = "https://ifps-inference:5000"
         IAPP_API_URL             = "https://ifps-inference-api:5000"
-        IFP_EVENTNOTICE_API_URL  = "https://event-notice:5000"
-        IFP_MAINTENANCE_API_URL  = "https://maintenance:5000"
-    if Settings().IFPS_ETCD_BROKER_API_URL is None and Settings().EXTERNAL is not None:
-        IFPS_ETCD_BROKER_API_URL = "https://ifps-inference-etcd-broker-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
     if Settings().IFPS_DATAFABRIC_API_URL is None and Settings().EXTERNAL is not None:
         IFPS_DATAFABRIC_API_URL = "https://ifps-datafabric-api-"+Settings().NAMESPACE+"-"+Settings().CLUSTER+"."+Settings().EXTERNAL
 
     # global
     mongo_data_info           = "iii.data.info"
-
-    mongo_kpi_metrics         = "iii.pre.metrics"
-    mongo_pre_catalog         = "iii.pre.catalog"
-    mongo_pre_user            = "iii.pre.user"
-    mongo_pre_roles           = "iii.pre.roles"
-    clientSecrets             = {}
-
-    mongo_pre_edge_model     = "iii.pre.edge.model"
-    mongo_pre_edge_server    = "iii.pre.edge.server"
-    mongo_pre_edge_infer     = "iii.pre.edge.infer"
-
-    mongo_pre_oee_kpi        = "iii.pre.oee_kpi"
-    mongo_pre_oee_kpi_alert  = "iii.pre.oee_kpi_alert"
-    
+    mongo_task_info           = "iii.task.info"
+    mongo_model_repo          = "iii.model.repo"
+    mongo_model_info          = "iii.model.info"
     
     """ Logging all env is upper not Include ENSAAS_SERVICES """
     logging.basicConfig(level=logging.INFO)

@@ -1,6 +1,6 @@
 APScheduler
 fastapi==0.88.0
-strawberry-graphql[fastapi]
+#strawberry-graphql[fastapi]
 uvicorn
 protobuf==3.20.*
 numpy == 1.21
@@ -11,8 +11,10 @@ MongoDBProxy
 pymongo
 requests
 minio
+jose
+passlib == 1.7.4
+bcrypt
+passlib[bcrypt]
 influxdb
+python-jose
 python-multipart
-scikit-learn
-statsmodels
-filterpy

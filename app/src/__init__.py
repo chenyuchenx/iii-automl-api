@@ -7,7 +7,7 @@ from config import configs as p
 
 InfluxDB = db.InfluxDB()
 
-def requestsApi(method, url, body=None, headers={}, verify=p.SKIP_TLS, timeout=p.IFPS_TIME_OUT):
+def requestsApi(method, url, body=None, headers={}, verify=p.SKIP_TLS, timeout=p.TIME_OUT_LIMIT):
 
     try:
         if body is not None and not isinstance(body, dict):

@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Request, HTTPException, status, Query
+from fastapi import APIRouter, Request, HTTPException, status, Query, Form, UploadFile
 from bson.objectid import ObjectId
 from config import configs as p
 from datetime import datetime
 from app.routers import schemas as sc
 from app.src import datafunc
-import app.database as db, requests, json, numpy, app.logs as log
+import app.database as db, os, io, numpy, app.logs as log
 
 router    = APIRouter()
 MongoDB   = db.MongoDB()
@@ -26,20 +26,32 @@ def get_source(*, type: str = Query(..., enum=["csv", "image folder"]), source: 
     return {"data": res, "total":len(res)}
 
 @router.get("/source/detail", status_code=status.HTTP_200_OK)
-async def get_source_detail(*, type: str = Query(..., enum=["csv"]), source: str = Query(None, enum=["MinIO", "DataFabric"]), name: str = Query(None),request: Request):
+async def get_source_detail(*, type: str = Query(..., enum=["csv"]), source: str = Query(None, enum=["MinIO", "DataFabric"]), id: str = Query(None),request: Request):
 
     if source == "MinIO" and type == "csv":
-        res = datafunc.getMinIODetail(name)
+        res = datafunc.getMinIODetail(id)
     elif source == "MinIO" and type == "image folder":
         res = []
     elif source == "DataFabric" :
-        res = datafunc.getDataFabricDetail(name)
+        res = datafunc.getDataFabricDetail(id)
     else:
         res = []
 
     return {"data": res, "total":len(res)}
 
-@router.get("/datainfo", status_code=status.HTTP_200_OK)
+@router.post('/minio/upload', status_code=status.HTTP_201_CREATED)
+async def upload_minio_file( request: Request, file: UploadFile , bucketName: str = Form(...)):
+
+    item = await request.form()
+    item = dict(item)
+
+    file_name = file.filename.rsplit('.', 1)[0]
+
+    res = datafunc.uploadMinIOFile(file, bucketName, file_name)
+
+    return {'data': {file_name: "success"}}
+
+@router.get("/info", status_code=status.HTTP_200_OK)
 async def get_data_info():
     pipeline = [
         {"$addFields": {
@@ -49,15 +61,16 @@ async def get_data_info():
         {"$sort" :{"createdAt" : 1}}
     ]
     
-    dictList = MongoDB.getMany(p.mongo_data_info, pipeline)
-    for c in dictList: 
+    dict_list = MongoDB.getMany(p.mongo_data_info, pipeline)
+    for c in dict_list: 
         c['id'] = str(c['_id'])
         del c['_id']
 
-    return {"data": dictList}
+    return {"data": dict_list, "total": len(dict_list)}
 
-@router.post("/datainfo", status_code=status.HTTP_201_CREATED)
-def create_data_task(*, item:dict, request: Request):
+
+@router.post("/info", status_code=status.HTTP_201_CREATED)
+def create_data_task(*, item:sc.DataItem, request: Request):
 
     if not 'name' in item:
         raise HTTPException(status_code=400, detail="name is missing.")
@@ -78,9 +91,9 @@ def create_data_task(*, item:dict, request: Request):
     item['updatedAt'] = datetime.utcnow()
     id = MongoDB.insertOne(p.mongo_data_info, item)
 
-    return {'data': {item.get('name') : str(id)}}
+    return {'data': {str(id) : item.get('name')}}
 
-@router.put("/datainfo", status_code=status.HTTP_200_OK)
+@router.put("/info", status_code=status.HTTP_200_OK)
 def update_data_task(*, id: str = Query(...), item:dict, request: Request):
 
     check = MongoDB.getMany(p.mongo_data_info, [{"$match":{"_id": ObjectId(id)}}])
@@ -96,7 +109,7 @@ def update_data_task(*, id: str = Query(...), item:dict, request: Request):
 
     return {'data': {id: "success"}}
 
-@router.delete("/datainfo", status_code=status.HTTP_200_OK )
+@router.delete("/info", status_code=status.HTTP_200_OK )
 def delete_data_task(*, id: str = Query(...), request: Request):
     try:
         check = MongoDB.getOne(p.mongo_data_info, {"_id":ObjectId(id)})
@@ -107,4 +120,36 @@ def delete_data_task(*, id: str = Query(...), request: Request):
     
     dictDoc = MongoDB.findOneAndDelete(p.mongo_data_info, {'_id':ObjectId(id)})
 
-    return {'data': {'delete':id}}
+    return {'data': {id: "delete"}}
+
+@router.get("/features", status_code=status.HTTP_200_OK)
+async def get_data_features(*, id: str = Query(...)):
+
+    data = MongoDB.getOne(p.mongo_data_info, {"_id":ObjectId(id)})
+
+    if data.get('source') == "MinIO" and data.get('type') == "csv":
+        res = datafunc.getMinioFeature(data)
+    elif data.get('source') == "MinIO" and data.get('type') == "image folder":
+        res = []
+    elif data.get('source') == "DataFabric" :
+        res = []
+    else:
+        res = []
+
+    return {"data": res, "total":len(res)}
+
+@router.get("/features/matrix", status_code=status.HTTP_200_OK)
+async def get_data_features_corr_matrix(*, id: str = Query(...), target: str = Query(...)):
+
+    data = MongoDB.getOne(p.mongo_data_info, {"_id":ObjectId(id)})
+
+    if data.get('source') == "MinIO" and data.get('type') == "csv":
+        res = datafunc.getMinioFeatureCorrMatrix(data, target)
+    elif data.get('source') == "MinIO" and data.get('type') == "image folder":
+        res = []
+    elif data.get('source') == "DataFabric" :
+        res = []
+    else:
+        res = []
+
+    return {"data": res, "total":len(res)}
