@@ -1,7 +1,6 @@
 from config import configs as p
-from app.logs import sys_log
 from app import create_app
-import time, uvicorn, urllib3
+import uvicorn, urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

@@ -15,8 +15,12 @@ def router_init(app):
 
     @app.get("/", tags=['Root'])
     def read_root(*, request: Request):
-        print(request.headers)
-        return f"The {p.IAPP_NAME_LOWER}-api is already working."
+        #print(request.headers)
+        routes = []
+        for route in app.routes:
+            route_info = { "path": route.path, "name": route.name, "methods": route.methods }
+            routes.append(route_info)
+        return {"name":f"The {p.IAPP_NAME_LOWER}-api", "verion":f"{p.IAPP_VERSION}", "desc":f"The {p.IAPP_NAME_LOWER}-api is already working.", "routes": routes}
     
     @app.get("/images/icon.svg", tags=['Root'])
     def read_image(*, request: Request):
