@@ -72,7 +72,7 @@ def getMinioFeatureCorrMatrix(data, target):
     columns = [{"name": column, "type": str(df[column].dtype), "nullCount": int(df[column].isnull().sum())} for column in df.columns]
 
     df = df.apply(pd.to_numeric, errors='coerce')
-    corr_matrix = df.corr()
+    corr_matrix = df.corr().abs()
 
     for column in columns:
         if column["name"] == target:

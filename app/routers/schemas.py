@@ -53,3 +53,39 @@ class DataItem(BaseModel):
                 "type": "csv"
             }
         }
+
+class TaskItem(BaseModel):
+    name: str
+    desc: str
+    type: str
+    repo: dict
+    dataset: dict
+    mode: dict
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "BTXXXXXXXX",
+                "desc" : "",
+                "type" : "Tabuler Prediction",
+                "repo" : {
+                    "id" : "644a1607a977cdb80046785b",
+                    "name" : "Ro0001"
+                },
+                "dataset": {
+                    "id": "641163d1b40a181e1e2d3fc8",
+                    "target": "csvColName",
+                    "feature": []
+                },
+                "mode" : {
+                    "testSize" : 0.2,
+                    "timeLimit" : 2000,
+                    "trials" : 100,
+                    "algo" : [ 
+                        "AutoKeras", 
+                        "AutoScikit"
+                    ],
+                    "callBack" : False
+                }
+            }
+        }

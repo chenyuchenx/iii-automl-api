@@ -4,7 +4,7 @@ from config import configs as p
 from datetime import datetime
 from app.routers import schemas as sc
 from app.src import datafunc
-import app.database as db, os, io, numpy, app.logs as log
+import app.database as db, json, app.logs as log
 
 router    = APIRouter()
 MongoDB   = db.MongoDB()
@@ -72,6 +72,8 @@ async def get_data_info():
 @router.post("/info", status_code=status.HTTP_201_CREATED)
 def create_data_task(*, item:sc.DataItem, request: Request):
 
+    item = item.__dict__
+    
     if not 'name' in item:
         raise HTTPException(status_code=400, detail="name is missing.")
     if not 'source' in item:
@@ -94,7 +96,9 @@ def create_data_task(*, item:sc.DataItem, request: Request):
     return {'data': {str(id) : item.get('name')}}
 
 @router.put("/info", status_code=status.HTTP_200_OK)
-def update_data_task(*, id: str = Query(...), item:dict, request: Request):
+def update_data_task(*, id: str = Query(...), item:sc.DataItem, request: Request):
+
+    item = item.__dict__
 
     check = MongoDB.getMany(p.mongo_data_info, [{"$match":{"_id": ObjectId(id)}}])
     if len(check) == 0 :
