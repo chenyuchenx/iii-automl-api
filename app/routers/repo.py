@@ -35,12 +35,13 @@ async def get_repo_info():
     repo_list = MongoDB.getMany(p.mongo_model_repo, pipeline)
     for item in repo_list: 
         item['id'] = str(item.pop('_id'))
-        if item.get('size') < 1024:
-            item['size'] = item.get('size')
-            item['unit'] = 'MB'
+        kb_size = item.get('size')/1024
+        if kb_size < 1024:
+            item['size'] = kb_size
+            item['unit'] = 'KB'
         else:
-            item['size'] = round(item.get('size') / 1024, 2)
-            item['unit'] = 'GB'
+            item['size'] = round(kb_size / 1024, 2)
+            item['unit'] = 'MB'
 
     return {"data": repo_list, "total": len(repo_list)}
 
@@ -115,3 +116,12 @@ def get_repo_model_info(*, id: str = Query(..., description= "[Get] /id to find 
                 x['id'] = str(x.pop('_id'))
 
     return {"data": model_list, "total":len(model_list)}
+
+@router.get("/info/detail/version", status_code=status.HTTP_200_OK)
+def get_repo_model_info_version(*, version: str = Query(..., description= "[Get] /version to find detail.")): 
+
+    model = MongoDB.getOne(p.mongo_model_detail, {"version": version})
+    model = {k: v for k, v in model.items() if k != '_id'}
+    model['trend'] = [{k: v.strftime('%Y-%m-%dT%H:%M:%SZ') if k == 'ts' else v for k, v in trend.items()} for trend in model['trend']]
+
+    return {"data": model, "total":len([model])}

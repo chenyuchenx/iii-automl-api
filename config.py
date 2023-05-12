@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     BUCKET_NAME: Optional[str]    = Field("Model Storage", env="BUCKET_NAME")
 
     IFPS_DATAFABRIC_API_URL: Optional[str]  = Field(None, env="IFPS_DATAFABRIC_API_URL")
+    IFPS_AUTOML_ENGINE_URL: Optional[str]   = Field(None, env="IFPS_AUTOML_ENGINE_URL")
     
     class Config:
         env_file = ".env"
@@ -127,8 +128,10 @@ class Config(Settings):
     # global
     mongo_data_info           = "iii.data.info"
     mongo_task_info           = "iii.task.info"
+    mongo_task_detail         = "iii.task.detail"
     mongo_model_repo          = "iii.model.repo"
     mongo_model_info          = "iii.model.info"
+    mongo_model_detail        = "iii.model.info.detail"
     
     """ Logging all env is upper not Include ENSAAS_SERVICES """
     logging.basicConfig(level=logging.INFO)

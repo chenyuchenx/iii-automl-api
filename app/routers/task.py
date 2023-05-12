@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Request, HTTPException, status, Query, Form
+from fastapi import APIRouter, Request, HTTPException, status, Query, Form, UploadFile
 from bson.objectid import ObjectId
 from config import configs as p
 from datetime import datetime
 from app.routers import schemas as sc
-import app.database as db, requests, json, numpy, app.logs as log
+from app.src.datafunc import allowed_file
+import app.database as db, pandas as pd, numpy as np, app.logs as log, requests, json
 
 router = APIRouter()
 MongoDB   = db.MongoDB()
@@ -29,7 +30,8 @@ async def get_task_mode_default():
         {
             "testSize" : 0.2,
             "timeLimit" : None,
-            "trials" : 100,
+            "trials" : 10,
+            "epochs": 20,
             "algo" : [ 
                 "AutoKeras", 
                 "AutoScikit"
@@ -86,6 +88,8 @@ def create_batch_task(*, item:sc.TaskItem, request: Request):
     item['trainEndAt'] = None
     item['createdAt'] = datetime.utcnow()
     item['updatedAt'] = datetime.utcnow()
+    item['dataset']['id'] = ObjectId(item['dataset']['id'] )
+    item['repo']['id'] = ObjectId(item['repo']['id'] )
 
     id = MongoDB.insertOne(p.mongo_task_info, item)
 
@@ -121,6 +125,13 @@ async def post_train(*, id: str = Form(...), state: str = Form(..., enum=["Creat
     
     MongoDB.upsertOne(p.mongo_task_info, {'_id':ObjectId(id)}, {"$set": { 'updatedAt': datetime.utcnow(), "isActive" : False, "state" : state, "status" : 0 }})
 
+    if state == "Created":
+        r = requests.request("POST", f"{p.IFPS_AUTOML_ENGINE_URL}/api/task", data={'id': id, 'state': state}, timeout=p.TIME_OUT_LIMIT, headers={}, verify=p.SKIP_TLS)
+        if r.status_code == 200:
+            return {'data': {id: "success"}}
+        else:
+            raise HTTPException(status_code=r.status_code, detail=f"{r.text}")
+
     return {'data': {id: "success"}}
 
 @router.delete("/info", status_code=status.HTTP_200_OK )
@@ -135,3 +146,54 @@ def delete_batch_task_task(*, id: str = Query(...), request: Request):
     task = MongoDB.findOneAndDelete(p.mongo_task_info, {'_id':ObjectId(id)})
 
     return {'data': {id: "delete"}}
+
+@router.get("/info/eval", status_code=status.HTTP_200_OK)
+async def get_batch_task_info_eval(*, id: str = Query(...)):
+    
+    try:
+        check = MongoDB.getOne(p.mongo_task_info, {"_id":ObjectId(id)})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"id : {id} ,error : {e}.")
+    if check is None:
+        raise HTTPException(status_code=404, detail=f"id: {id} not found.")
+    
+    time_diff = check.get("trainEndAt") - check.get("trainStartAt")
+
+    tasks = [{
+        "name":check.get("name"),
+        "createdAt":check.get("createdAt"),
+        "trainingDuration":time_diff,
+        "accuracy":check.get("accuracy"),
+        "target":check.get("dataset").get("target"),
+        "feature":check.get("dataset").get("feature"),
+        "problem":"Binary",
+        "mode":check.get("mode"),
+        "trials":[
+            {
+                "name":"structured_data_block_1/normalize",
+                "accuracy":0.6826922
+            },
+            {
+                "name":"structured_data_2/rf",
+                "accuracy":0.5936417
+            }
+        ]
+    }]
+
+    return {"data": tasks, "total":len(tasks)}
+
+@router.post('/info/infer', status_code=status.HTTP_201_CREATED)
+async def post_batch_task_info_infer(*, id: str = Form(...), request: Request, file: UploadFile):
+
+    if file and allowed_file(file.filename):
+        try:
+            file_data = await file.read()  # 讀取檔案資料
+            files = {'file': (file.filename, file_data)}
+            r = requests.request("POST", f"{p.IFPS_AUTOML_ENGINE_URL}/api/task/info/infer", data={'id': id}, files=files, timeout=p.TIME_OUT_LIMIT, headers={}, verify=p.SKIP_TLS)
+            r.raise_for_status()  # 若請求失敗會拋出異常
+            return r.json()
+        except Exception as e:
+            log.sys_log.error(f"[Task] inference Error occurred: {e}")
+            raise HTTPException(status_code=400, detail=f"[Task] inference Error occurred: {e}")
+    else:
+        raise HTTPException(status_code=400, detail="Format error, please upload csv format file.")
