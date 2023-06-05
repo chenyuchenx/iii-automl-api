@@ -18,7 +18,7 @@ async def get_repo_info():
             {
                 "_id": "$_id",
                 "name" : {"$first" : "$name"},
-                "total": { "$sum": 1 },
+                "total": {"$sum": {"$cond": [{"$gt": ["$repolst", None]}, 1, 0]}},
                 "size": {"$sum": "$repolst.size"},
                 "createdAt" : {"$first" : "$createdAt"},
                 "updatedAt" : {"$first" : "$updatedAt"}
@@ -86,6 +86,7 @@ def delete_repo_task(*, id: str = Query(...), request: Request):
 def get_repo_model_info(*, id: str = Query(..., description= "[Get] /id to find detail."), request: Request): 
 
     pipeline = [
+        {"$match":{"repoId":ObjectId(id)}},
         { 
             "$group": {
                 "_id": "$taskId", 

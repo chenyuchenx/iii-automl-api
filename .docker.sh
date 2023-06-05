@@ -3,7 +3,7 @@
 # 正式用
 CONTAINER="iii-automl-api"
 DOCKER_REPO="iiicondor/$CONTAINER"
-VERSION="0.0.15"
+VERSION="0.0.22"
 MESSAGE="[Lisa]"
 
 docker build -t $DOCKER_REPO:$VERSION .

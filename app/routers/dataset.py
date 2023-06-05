@@ -10,28 +10,35 @@ router    = APIRouter()
 MongoDB   = db.MongoDB()
 
 @router.get("/source", status_code=status.HTTP_200_OK)
-def get_source(*, type: str = Query(..., enum=["csv", "image folder"]), source: str = Query(None, enum=["MinIO", "DataFabric"]), request: Request):
+def get_source(*, type: str = Query(None, enum=["csv", "image"]), source: str = Query(None, enum=["MinIO", "DataFabric"]), request: Request):
 
-    if source == "MinIO" and type == "csv":
-        res = datafunc.getMinIOInfo()
-    elif source == "MinIO" and type == "image folder":
-        res = []
-    elif source == "DataFabric" :
-        res = datafunc.getDataFabricInfo()
-    elif type == "csv":
+    if source is None and type is None:
         res = ["MinIO", "DataFabric"]
+    elif source is not None and type is None:
+        if source == "MinIO":
+            res = ["csv", "image"]
+        elif source == "DataFabric" :
+            res = ["csv"]
+        else:
+            res = []
+    elif source == "MinIO" and type == "csv":
+        res = datafunc.getMinIOInfo()
+    elif source == "MinIO" and type == "image":
+        res = datafunc.getMinIOInfo()
+    elif source == "DataFabric" and type == "csv":
+        res = datafunc.getDataFabricInfo()
     else:
-        res = ["MinIO"]
+        res = []
 
     return {"data": res, "total":len(res)}
 
 @router.get("/source/detail", status_code=status.HTTP_200_OK)
-async def get_source_detail(*, type: str = Query(..., enum=["csv"]), source: str = Query(None, enum=["MinIO", "DataFabric"]), id: str = Query(None),request: Request):
+async def get_source_detail(*, type: str = Query(..., enum=["csv", "image"]), source: str = Query(None, enum=["MinIO", "DataFabric"]), id: str = Query(None),request: Request):
 
     if source == "MinIO" and type == "csv":
         res = datafunc.getMinIODetail(id)
-    elif source == "MinIO" and type == "image folder":
-        res = []
+    elif source == "MinIO" and type == "image":
+        res = datafunc.getMinIOImage(id)
     elif source == "DataFabric" :
         res = datafunc.getDataFabricDetail(id)
     else:
@@ -86,6 +93,9 @@ def create_data_task(*, item:sc.DataItem, request: Request):
     if MongoDB.getMany(p.mongo_data_info, [{"$match":{"name":item.get('name')}}]):
         raise HTTPException(status_code=409, detail="This name already exists.")
     
+    if item.get('source') == "Minio":
+        item['source'] = 'MinIO'
+    
     if item.get('source') not in {'MinIO', 'DataFabric'}:
         raise HTTPException(status_code=400, detail=f"source only can choose [ MinIO / DataFabric ].")
 
@@ -133,12 +143,12 @@ async def get_data_features(*, id: str = Query(...)):
 
     if data.get('source') == "MinIO" and data.get('type') == "csv":
         res = datafunc.getMinioFeature(data)
-    elif data.get('source') == "MinIO" and data.get('type') == "image folder":
-        res = []
+    elif data.get('source') == "MinIO" and data.get('type') == "image":
+        res = datafunc.getMinioImageFeature(data)
     elif data.get('source') == "DataFabric" :
-        res = []
+        res = datafunc.getDataFabricFeature(data)
     else:
-        res = []
+        res = [] 
 
     return {"data": res, "total":len(res)}
 
@@ -149,10 +159,10 @@ async def get_data_features_corr_matrix(*, id: str = Query(...), target: str = Q
 
     if data.get('source') == "MinIO" and data.get('type') == "csv":
         res = datafunc.getMinioFeatureCorrMatrix(data, target)
-    elif data.get('source') == "MinIO" and data.get('type') == "image folder":
+    elif data.get('source') == "MinIO" and data.get('type') == "image":
         res = []
     elif data.get('source') == "DataFabric" :
-        res = []
+        res = datafunc.getDataFabricFeatureCorrMatrix(data, target)
     else:
         res = []
 

@@ -41,7 +41,7 @@ class DataItem(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "name": "MO20230426XXXX",
+                "name": "MO_20230602XXXX",
                 "source": "MinIO",
                 "storage": {
                     "name": "file 0 04.20.2022-12.27.31.514999_demodevice.csv",
