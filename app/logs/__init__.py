@@ -1,7 +1,7 @@
 import logging, os
 
 sys_log = logging.getLogger('root')
-sys_log.setLevel(level=logging.DEBUG)
+#sys_log.setLevel(level=logging.DEBUG)
 
 def log_init():
 

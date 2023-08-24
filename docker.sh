@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# 正式用
-CONTAINER="iii-automl-api"
+CONTAINER="iii-ai-flow-hub-api"
 DOCKER_REPO="iiicondor/$CONTAINER"
-VERSION="0.0.22"
+VERSION="1.0.1"
 MESSAGE="[Lisa]"
 
 docker build -t $DOCKER_REPO:$VERSION .
@@ -15,5 +14,5 @@ docker push $DOCKER_REPO:$VERSION
 docker rmi -f $(docker images | grep $DOCKER_REPO | awk '{print $3}')
 docker image prune -f
 
-#docker build -t iiicondor/iii-automl-api:0.0.6 . 
-#docker push iiicondor/iii-automl-api:0.0.6
+#docker build -t iiicondor/iii-ai-flow-hub-api:1.0.1 . 
+#docker push iiicondor/iii-ai-flow-hub-api:1.0.1

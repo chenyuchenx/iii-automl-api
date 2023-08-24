@@ -4,7 +4,7 @@ from config import configs as p
 from datetime import datetime
 from app.routers import schemas as sc
 from app.src.datafunc import allowed_file
-import app.database as db, pandas as pd, numpy as np, app.logs as log, requests, json
+import app.database as db, app.logs as log, requests, os
 
 router = APIRouter()
 MongoDB   = db.MongoDB()
@@ -54,7 +54,7 @@ async def get_batch_task_info():
         {"$sort" :{"createdAt" : 1}}
     ]
     
-    tasks = MongoDB.getMany(p.mongo_task_info, pipeline)
+    tasks = MongoDB.getMany(p.MDB_TASK_INFO, pipeline)
     for task in tasks: 
         task['id'] = str(task.pop('_id'))
         task['dataset']['id'] = str(task['dataset']['id'])
@@ -76,7 +76,7 @@ def create_batch_task(*, item:sc.TaskItem, request: Request):
     if not 'mode' in item:
         raise HTTPException(status_code=400, detail="storage is missing.")
 
-    if MongoDB.getMany(p.mongo_task_info, [{"$match":{"name":item.get('name')}}]):
+    if MongoDB.getMany(p.MDB_TASK_INFO, [{"$match":{"name":item.get('name')}}]):
         raise HTTPException(status_code=409, detail="This name already exists.")
     
     if item.get('type') not in {'Tabuler Prediction', 'Image Classification', 'Object Detection'}:
@@ -89,9 +89,14 @@ def create_batch_task(*, item:sc.TaskItem, request: Request):
     item['createdAt'] = datetime.utcnow()
     item['updatedAt'] = datetime.utcnow()
     item['dataset']['id'] = ObjectId(item['dataset']['id'] )
-    item['repo']['id'] = ObjectId(item['repo']['id'] )
+    if 'id' in item['repo']:
+        item['repo']['id'] = ObjectId(item['repo']['id'] )
+    else:
+        id = MongoDB.insertOne(p.MDB_MODEL_REPO, {"name":f"{item['name']} Repo", "createdAt":datetime.utcnow(), "updatedAt":datetime.utcnow()})
+        item['repo']['id'] = ObjectId(id)
+        item['repo']['name'] = f"{item['name']} Repo"
 
-    id = MongoDB.insertOne(p.mongo_task_info, item)
+    id = MongoDB.insertOne(p.MDB_TASK_INFO, item)
 
     return {'data': {str(id) : item.get('name')}}
 
@@ -100,7 +105,7 @@ def update_batch_task(*, id: str = Query(...), item:sc.TaskItem, request: Reques
 
     item = item.__dict__
 
-    check = MongoDB.getMany(p.mongo_task_info, [{"$match":{"_id": ObjectId(id)}}])
+    check = MongoDB.getMany(p.MDB_TASK_INFO, [{"$match":{"_id": ObjectId(id)}}])
     if len(check) == 0 :
         raise HTTPException(status_code=404, detail=f"This id : {id} not found.")
     
@@ -109,41 +114,45 @@ def update_batch_task(*, id: str = Query(...), item:sc.TaskItem, request: Reques
     
     item['updatedAt'] = datetime.utcnow()
 
-    MongoDB.upsertOne(p.mongo_data_info, {'_id':ObjectId(id)}, {"$set": item})
+    MongoDB.upsertOne(p.MDB_DATA_INFO, {'_id':ObjectId(id)}, {"$set": item})
 
     return {'data': {id: "success"}}
 
 @router.post("/info/train", status_code=status.HTTP_200_OK)
 async def post_train(*, id: str = Form(...), state: str = Form(..., enum=["Created", "Stopped", "Cancel"]), request: Request):
 
-    check = MongoDB.getMany(p.mongo_task_info, [{"$match":{"_id": ObjectId(id)}}])
+    check = MongoDB.getMany(p.MDB_TASK_INFO, [{"$match":{"_id": ObjectId(id)}}])
     if len(check) == 0 :
         raise HTTPException(status_code=404, detail=f"This id : {id} not found.")
     
     if state not in {'Created', 'Stopped', 'Cancel'}:
         raise HTTPException(status_code=400, detail=f"state only can choose [ Created / Stopped / Cancel ].")
     
-    MongoDB.upsertOne(p.mongo_task_info, {'_id':ObjectId(id)}, {"$set": { 'updatedAt': datetime.utcnow(), "isActive" : False, "state" : state, "status" : 0 }})
+    MongoDB.upsertOne(p.MDB_TASK_INFO, {'_id':ObjectId(id)}, {"$set": { 'updatedAt': datetime.utcnow(), "isActive" : False, "state" : state, "status" : 0 }})
 
-    if state == "Created":
-        r = requests.request("POST", f"{p.IFPS_AUTOML_ENGINE_URL}/api/task", data={'id': id, 'state': state}, timeout=p.TIME_OUT_LIMIT, headers={}, verify=p.SKIP_TLS)
-        if r.status_code == 200:
-            return {'data': {id: "success"}}
-        else:
-            raise HTTPException(status_code=r.status_code, detail=f"{r.text}")
+    try:
+        if state == "Created":
+            r = requests.request("POST", f"{p.III_AI_FLOW_HUB_ENGINE_URL}/api/task", data={'id': id, 'state': state}, timeout=p.IS_TLS_TIME_LIMIT, headers={}, verify=p.IS_TLS_ENABLE)
+            if r.status_code == 200:
+                return {'data': {id: "success"}}
+            else:
+                raise HTTPException(status_code=r.status_code, detail=f"{r.text}")
+    except Exception as e:
+        log.sys_log.error(f"[Task] inference Error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"[Task] Train Error occurred: {e}")
 
     return {'data': {id: "success"}}
 
 @router.delete("/info", status_code=status.HTTP_200_OK )
 def delete_batch_task_task(*, id: str = Query(...), request: Request):
     try:
-        check = MongoDB.getOne(p.mongo_task_info, {"_id":ObjectId(id)})
+        check = MongoDB.getOne(p.MDB_TASK_INFO, {"_id":ObjectId(id)})
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"id : {id} ,error : {e}.")
     if check is None:
         raise HTTPException(status_code=404, detail=f"This id: {id} not found.")
     
-    task = MongoDB.findOneAndDelete(p.mongo_task_info, {'_id':ObjectId(id)})
+    task = MongoDB.findOneAndDelete(p.MDB_TASK_INFO, {'_id':ObjectId(id)})
 
     return {'data': {id: "delete"}}
 
@@ -151,7 +160,7 @@ def delete_batch_task_task(*, id: str = Query(...), request: Request):
 async def get_batch_task_info_eval(*, id: str = Query(...)):
     
     try:
-        check = MongoDB.getOne(p.mongo_task_info, {"_id":ObjectId(id)})
+        check = MongoDB.getOne(p.MDB_TASK_INFO, {"_id":ObjectId(id)})
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"id : {id} ,error : {e}.")
     if check is None:
@@ -189,11 +198,35 @@ async def post_batch_task_info_infer(*, id: str = Form(...), request: Request, f
         try:
             file_data = await file.read()  # 讀取檔案資料
             files = {'file': (file.filename, file_data)}
-            r = requests.request("POST", f"{p.IFPS_AUTOML_ENGINE_URL}/api/task/info/infer", data={'id': id}, files=files, timeout=p.TIME_OUT_LIMIT, headers={}, verify=p.SKIP_TLS)
-            r.raise_for_status()  # 若請求失敗會拋出異常
+            r = requests.request("POST", f"{p.III_AI_FLOW_HUB_ENGINE_URL}/api/task/info/infer", data={'id': id}, files=files, timeout=p.IS_TLS_TIME_LIMIT, headers={}, verify=p.IS_TLS_ENABLE)
             return r.json()
         except Exception as e:
             log.sys_log.error(f"[Task] inference Error occurred: {e}")
             raise HTTPException(status_code=400, detail=f"[Task] inference Error occurred: {e}")
     else:
         raise HTTPException(status_code=400, detail="Format error, please upload csv format file.")
+
+@router.get("/info/deploy", status_code=status.HTTP_200_OK)
+async def get_batch_task_info_deploy(*, id: str = Query(...)):
+    
+    try:
+        check = MongoDB.getOne(p.MDB_TASK_INFO, {"_id":ObjectId(id)})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"id : {id} ,error : {e}.")
+    if check is None:
+        raise HTTPException(status_code=404, detail=f"id: {id} not found.")
+    
+    time_diff = check.get("trainEndAt") - check.get("trainStartAt")
+
+    tasks = [{
+        "name":check.get("name"),
+        "createdAt":check.get("createdAt"),
+        "trainingDuration":time_diff,
+        "accuracy":check.get("accuracy"),
+        "url":f"{p.III_AI_FLOW_HUB_ENGINE_URL}/api/task/info/infer/{id}",
+        "deployModel":"newone",
+        "inferStatus":"Success",
+        "deployStatus":"Deployed",
+    }]
+
+    return {"data": tasks, "total":len(tasks)}

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Union
-from fastapi import Depends, APIRouter, HTTPException, status, Query, Response, Request, security, Form
+from fastapi import Depends, APIRouter, HTTPException, status, Response, Request, security, Form
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 import passlib.handlers.bcrypt, app.routers.schemas as sc, bcrypt

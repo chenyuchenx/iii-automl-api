@@ -150,7 +150,7 @@ def getDataFabricInfo():
 
     object_list = []
     
-    res, r_status = utils.requestsApi("GET", f"{p.IFPS_DATAFABRIC_API_URL}/dataset")# headers=headers
+    res, r_status = utils.requestsApi("GET", f"{p.III_DATAFABRIC_API_URL}/dataset")# headers=headers
     if r_status == 200 : 
         for item in res:
             object_list.append({"id":item.get('disTableName') ,"name":item.get('datasetName'),"parentId":item.get('ParentID')})
@@ -161,7 +161,7 @@ def getDataFabricDetail(id):
     
     object_list = []
     
-    res, r_status = utils.requestsApi("GET", f"{p.IFPS_DATAFABRIC_API_URL}/dataset")# headers=headers
+    res, r_status = utils.requestsApi("GET", f"{p.III_DATAFABRIC_API_URL}/dataset")# headers=headers
     if r_status == 200 : 
         for item in res:
             object_dict = {'name': item.get('datasetName'), 'bucketName': id, 'path': item.get('disTableName'), 'updatedAt': item.get('updatedAt'), 'size': item.get('datasetSize')}
@@ -173,7 +173,7 @@ def getDataFabricFeature(data):
     
     storage = data.get('storage')
     object_name = storage.get('path')
-    data, r_status = utils.requestsApi("GET", f"{p.IFPS_DATAFABRIC_API_URL}/data/query/api?name={object_name}")
+    data, r_status = utils.requestsApi("GET", f"{p.III_DATAFABRIC_API_URL}/data/query/api?name={object_name}")
     columns = [column['name'] for column in data['columns']]
     rows = [[item['v'] for item in row['row']] for row in data['rows']]
     df = pd.DataFrame(rows, columns=columns)
@@ -187,7 +187,7 @@ def getDataFabricFeatureCorrMatrix(data, target):
     
     storage = data.get('storage')
     object_name = storage.get('path')
-    data, r_status = utils.requestsApi("GET", f"{p.IFPS_DATAFABRIC_API_URL}/data/query/api?name={object_name}")
+    data, r_status = utils.requestsApi("GET", f"{p.III_DATAFABRIC_API_URL}/data/query/api?name={object_name}")
     columns = [column['name'] for column in data['columns']]
     rows = [[item['v'] for item in row['row']] for row in data['rows']]
     df = pd.DataFrame(rows, columns=columns)

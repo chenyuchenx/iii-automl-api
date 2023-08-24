@@ -1,8 +1,7 @@
-from pymongo import MongoClient, UpdateOne
+from pymongo import MongoClient
 from mongo_proxy import MongoProxy
 from config import configs as p
-from datetime import datetime
-import minio, influxdb, app.logs as log
+import minio, app.logs as log
 
 class Minio(object):
     
@@ -12,57 +11,16 @@ class Minio(object):
         if Minio.init_flag:
             return
         try:
-            self.client = minio.Minio( p.MINIO_HOST, p.MINIO_USER, p.MINIO_PASSWORD, secure=True )
-            Minio.init_flag = True
-            #if self.client.bucket_exists(p.BUCKET_NAME) == False:
-            #    self.client.make_bucket(p.BUCKET_NAME)
-            log.sys_log.info(f"[DB] Connect minio success: {p.MINIO_HOST}.")
+            self.client = minio.Minio(p.MINIO_HOST, p.MINIO_USER, p.MINIO_PASSWORD, secure=True)
+            self.initialize_minio()
         except Exception as e:
-            log.sys_log.error("[DB] Connect minio failed: {}".format(e))
+            log.sys_log.error(f"[MDB] Connect minio error: {str(e)}.")
 
-class InfluxDB():
-    
-    _instance = None
-    init_flag = False
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        if InfluxDB.init_flag:
-            return
-        try:
-            url = p.INFLUX_URL.split(':')
-            self.client = influxdb.InfluxDBClient(url[0], url[1], p.INFLUX_USERNAME, p.INFLUX_PASSWORD, p.INFLUX_DATABASE)
-            connectCheck = self.client.get_list_database()[0].get('name')
-            log.sys_log.info(f"[DB] Connect influx: {datetime.now()} - {connectCheck} - connect success .")
-            InfluxDB.init_flag = True
-        except Exception as e:
-            log.sys_log.error(f"[DB] Connect influx: {datetime.now()} - {e} - connect error .")
-
-    def showMeasurements(self):
-        return self.client.query('show measurements')
-    
-    def selectSql(self, execute):
-        try:
-            results = self.client.query(execute)
-        except Exception as e:
-            results = []
-            log.sys_log.error(f"[DB] execute influx: {datetime.now()} - {e} - connect error .")
-        finally:
-            return results
-    
-    def write_points(self, points):
-        try:
-            results = self.client.write_points(points , retention_policy='point_prediction', batch_size= 5000, protocol = 'json')
-            log.sys_log.info(f"[DB] write points: {results}")
-        except Exception as e:
-            results = None
-            log.sys_log.error(f"[DB] execute influx: {datetime.now()} - {e} - connect error .")
-        finally:
-            return results
+    def initialize_minio(self):
+        Minio.init_flag = True
+        if not self.client.bucket_exists(p.BUCKET_NAME):
+            self.client.make_bucket(p.BUCKET_NAME)
+            log.sys_log.info(f"[MDB] Connect minio success: {p.MINIO_HOST}. Created bucket: {p.BUCKET_NAME}.")
 
 class MongoDB(object):
     
@@ -78,15 +36,18 @@ class MongoDB(object):
         if MongoDB.init_flag:
             return
         
-        mongoClient = MongoProxy(MongoClient(p.MONGODB_URL,
-                                 username = p.MONGODB_USERNAME,
-                                 password = p.MONGODB_PASSWORD,
-                                 authSource = p.MONGODB_AUTH_SOURCE,
-                                 authMechanism = p.MONGODB_AUTHMECHANISM))
-                                 
-        self.DATABASE = mongoClient[p.MONGODB_DATABASE]
-        log.sys_log.info(f"[DB] Connect mongo success: {p.MONGODB_DATABASE}.")
-        MongoDB.init_flag = True
+        try:
+            mongoClient = MongoProxy(MongoClient(p.MONGODB_URL,
+                                     username = p.MONGODB_USERNAME,
+                                     password = p.MONGODB_PASSWORD,
+                                     authSource = p.MONGODB_AUTH_SOURCE,
+                                     authMechanism = p.MONGODB_AUTHMECHANISM))
+
+            self.DATABASE = mongoClient[p.MONGODB_DATABASE]
+            log.sys_log.info(f"[MDB] Connect mongo success: {p.MONGODB_DATABASE}.")
+            MongoDB.init_flag = True
+        except Exception as e:
+            log.sys_log.error(f"[MDB] Connect mongo error: {str(e)}.")
     
     def getOne(self, database, dictRequest):
         mCollection = self.DATABASE[database]

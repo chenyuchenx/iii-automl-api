@@ -5,11 +5,7 @@ from app.routers import router_init
 from app.logs import log_init, sys_log
 
 def conf_init(app):
-    sys_log.info(msg=f'Start app with {p.ENVIRONMENT} environment')
-    if p.ENVIRONMENT == 'production':
-        app.docs_url = None
-        app.redoc_url = None
-        app.debug = False
+    sys_log.info(msg=f'Start III Ai Flow Hub service with {p.ENVIRONMENT} environment.')
 
 def create_app():
 
@@ -41,8 +37,8 @@ def create_app():
     ]
 
     app = FastAPI(
-        title="Neural Auto III (NAI) Platform User Module Documentation.",
-        description=f"Neural Auto III (NAI) - Efficient AutoML For Everyone.",
+        title="III Ai Flow Hub (IAFH)(資策會智能流中心) Platform User Module Documentation.",
+        description=f"II Ai Flow Hub (IAFH)(資策會智能流中心)  - Efficient AutoML For Everyone.",
         version=f"{p.IAPP_VERSION}",
         openapi_tags=tags_metadata
     )

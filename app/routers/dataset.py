@@ -68,7 +68,7 @@ async def get_data_info():
         {"$sort" :{"createdAt" : 1}}
     ]
     
-    dict_list = MongoDB.getMany(p.mongo_data_info, pipeline)
+    dict_list = MongoDB.getMany(p.MDB_DATA_INFO, pipeline)
     for c in dict_list: 
         c['id'] = str(c['_id'])
         del c['_id']
@@ -90,7 +90,7 @@ def create_data_task(*, item:sc.DataItem, request: Request):
     if not 'storage' in item:
         raise HTTPException(status_code=400, detail="storage is missing.")
 
-    if MongoDB.getMany(p.mongo_data_info, [{"$match":{"name":item.get('name')}}]):
+    if MongoDB.getMany(p.MDB_DATA_INFO, [{"$match":{"name":item.get('name')}}]):
         raise HTTPException(status_code=409, detail="This name already exists.")
     
     if item.get('source') == "Minio":
@@ -101,7 +101,7 @@ def create_data_task(*, item:sc.DataItem, request: Request):
 
     item['createdAt'] = datetime.utcnow()
     item['updatedAt'] = datetime.utcnow()
-    id = MongoDB.insertOne(p.mongo_data_info, item)
+    id = MongoDB.insertOne(p.MDB_DATA_INFO, item)
 
     return {'data': {str(id) : item.get('name')}}
 
@@ -110,7 +110,7 @@ def update_data_task(*, id: str = Query(...), item:sc.DataItem, request: Request
 
     item = item.__dict__
 
-    check = MongoDB.getMany(p.mongo_data_info, [{"$match":{"_id": ObjectId(id)}}])
+    check = MongoDB.getMany(p.MDB_DATA_INFO, [{"$match":{"_id": ObjectId(id)}}])
     if len(check) == 0 :
         raise HTTPException(status_code=404, detail=f"This id : {id} not found.")
     
@@ -119,27 +119,27 @@ def update_data_task(*, id: str = Query(...), item:sc.DataItem, request: Request
     
     item['updatedAt'] = datetime.utcnow()
 
-    MongoDB.upsertOne(p.mongo_data_info, {'_id':ObjectId(id)}, {"$set": item})
+    MongoDB.upsertOne(p.MDB_DATA_INFO, {'_id':ObjectId(id)}, {"$set": item})
 
     return {'data': {id: "success"}}
 
 @router.delete("/info", status_code=status.HTTP_200_OK )
 def delete_data_task(*, id: str = Query(...), request: Request):
     try:
-        check = MongoDB.getOne(p.mongo_data_info, {"_id":ObjectId(id)})
+        check = MongoDB.getOne(p.MDB_DATA_INFO, {"_id":ObjectId(id)})
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"id : {id} ,error : {e}.")
     if check is None:
         raise HTTPException(status_code=404, detail=f"This id: {id} not found.")
     
-    dictDoc = MongoDB.findOneAndDelete(p.mongo_data_info, {'_id':ObjectId(id)})
+    dictDoc = MongoDB.findOneAndDelete(p.MDB_DATA_INFO, {'_id':ObjectId(id)})
 
     return {'data': {id: "delete"}}
 
 @router.get("/features", status_code=status.HTTP_200_OK)
 async def get_data_features(*, id: str = Query(...)):
 
-    data = MongoDB.getOne(p.mongo_data_info, {"_id":ObjectId(id)})
+    data = MongoDB.getOne(p.MDB_DATA_INFO, {"_id":ObjectId(id)})
 
     if data.get('source') == "MinIO" and data.get('type') == "csv":
         res = datafunc.getMinioFeature(data)
@@ -155,7 +155,7 @@ async def get_data_features(*, id: str = Query(...)):
 @router.get("/features/matrix", status_code=status.HTTP_200_OK)
 async def get_data_features_corr_matrix(*, id: str = Query(...), target: str = Query(...)):
 
-    data = MongoDB.getOne(p.mongo_data_info, {"_id":ObjectId(id)})
+    data = MongoDB.getOne(p.MDB_DATA_INFO, {"_id":ObjectId(id)})
 
     if data.get('source') == "MinIO" and data.get('type') == "csv":
         res = datafunc.getMinioFeatureCorrMatrix(data, target)

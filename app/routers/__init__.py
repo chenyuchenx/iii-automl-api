@@ -1,6 +1,5 @@
-from fastapi import Query, HTTPException, Response, Request
+from fastapi import HTTPException, Response, Request
 from config import configs as p
-from app.src import sched
 from .repo import router as repo_router
 from .task import router as infer_router
 from .dataset import router as data_router
@@ -11,19 +10,28 @@ def router_init(app):
 
     @app.on_event('startup')
     def init_data():
-        sched.__init__()
+        #sched.__init__()
+        pass
 
     @app.get("/", tags=['Root'])
-    def read_root(*, request: Request):
-        #print(request.headers)
+    async def read_root(*, request: Request):
         routes = []
         for route in app.routes:
             route_info = { "path": route.path, "name": route.name, "methods": route.methods }
             routes.append(route_info)
-        return {"name":f"The {p.IAPP_NAME_LOWER}-api", "verion":f"{p.IAPP_VERSION}", "desc":f"The {p.IAPP_NAME_LOWER}-api is already working.", "routes": routes}
+        return {"name":f"{p.IAPP_NAME}", "verion":f"{p.IAPP_VERSION}", "desc":f"The {p.IAPP_NAME} is already working.", "routes": routes}
+    
+    @app.get("/logs", tags=['Root'])
+    async def get_logs():
+        try:
+            with open('logs/logs.log', 'r', encoding='utf-8') as file: 
+                logs = file.read()
+                return {"logs": logs}
+        except Exception as e:
+            return {"error": str(e)}
     
     @app.get("/images/icon.svg", tags=['Root'])
-    def read_image(*, request: Request):
+    async def read_image(*, request: Request):
         try:
             if hasattr(sys, '_MEIPASS'):
                 base_path = sys._MEIPASS

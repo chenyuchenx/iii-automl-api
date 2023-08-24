@@ -1,20 +1,19 @@
+# backend
 APScheduler
-fastapi==0.88.0
-#strawberry-graphql[fastapi]
-uvicorn
-protobuf==3.20.*
-numpy == 1.21
-pandas
-python-dateutil
+fastapi
+pydantic[dotenv]==1.10.12
 python-dotenv
+python-multipart
+uvicorn
+pandas
+requests
+# database
 MongoDBProxy
 pymongo
-requests
 minio
+# auth
 jose
 passlib == 1.7.4
 bcrypt
 passlib[bcrypt]
-influxdb
 python-jose
-python-multipart
